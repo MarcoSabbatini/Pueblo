@@ -91,13 +91,13 @@ def main():
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    # Crea gli 8 cubetti con offset diversi
-    offsets = [(x, y, z) for x in range(2) for y in range(2) for z in range(2)]
+    # Crea i cubetti con offset specifici
+    offsets = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 1)]
     center = np.array([0, 0, 0])
     global_vertices_list = [create_unit_cube(offset + center) for offset in offsets]
 
     # Colori distinti per ogni cubetto
-    colors = ['red', 'green', 'blue', 'yellow', 'cyan', 'magenta', 'orange', 'purple']
+    colors = ['grey', 'grey', 'grey', 'grey']
     draw_cubes(ax, global_vertices_list, colors)
 
     ax.set_xlim([0, 5])
@@ -138,4 +138,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
