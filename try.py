@@ -47,13 +47,19 @@ def rotation_matrix_z(angle):
     c, s = np.cos(angle), np.sin(angle)
     return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
 
+#more visibility, in order to not let the cube go outside the scope
 def update_cubes(ax, vertices_list, colors):
     ax.cla()
     draw_cubes(ax, vertices_list, colors)
-    ax.set_xlim([0, 5])
-    ax.set_ylim([0, 5])
-    ax.set_zlim([0, 5])
+    ax.set_xlim([-1, 5])
+    ax.set_ylim([-1, 5])
+    ax.set_zlim([-1, 5])
     plt.draw()
+
+#gets the avg of the whole cube
+def get_global_center(vertices_list):
+    all_points = np.vstack(vertices_list) # puts one on top of the other the rows, impiles one over each other, they have to be the same dim
+    return np.mean(all_points, axis=0)
 
 #rotation function on click
 def rotate(event, axis, angle, ax, colors):
@@ -67,23 +73,29 @@ def rotate(event, axis, angle, ax, colors):
     else:
         return
     
-    current_rotation_matrix = R @ current_rotation_matrix
+    center = get_global_center(global_vertices_list)
 
-    center = np.array([1, 1, 1]) + np.array([
-        float(text_box_x.text), float(text_box_y.text), float(text_box_z.text)
-    ])
-    global_vertices_list = [np.dot(vertices - center, R) + center for vertices in global_vertices_list]
+    #rotates cubelets around center
+    new_vertices = []
+    for v in global_vertices_list:
+        rotated = np.dot(v - center, R.T) + center
+        new_vertices.append(rotated)
+
+    global_vertices_list = new_vertices
     update_cubes(ax, global_vertices_list, colors)
 
-#cube translate
+#cube translate adding what's insiede the textboxes
 def update_position(ax, event=None):
     global global_vertices_list, offsets
     try:
-        center = np.array([float(text_box_x.text), float(text_box_y.text), float(text_box_z.text)])
-        global_vertices_list = [
-            np.dot(create_unit_cube(offset), current_rotation_matrix) + center
-            for offset in offsets
-        ]
+        tx = float(text_box_x.text)
+        ty = float(text_box_y.text)
+        tz = float(text_box_z.text)
+        translation = np.array([tx, ty, tz])
+
+        #center = np.array([float(text_box_x.text), float(text_box_y.text), float(text_box_z.text)])
+        global_vertices_list = [v + translation for v in global_vertices_list]
+
         update_cubes(ax, global_vertices_list, colors)
     except ValueError:
         pass  
@@ -95,17 +107,11 @@ def main():
 
     #little cubelets
     offsets = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 1)]
-    center = np.array([0, 0, 0])
-    current_rotation_matrix = np.eye(3)
-    
-    global_vertices_list = [create_unit_cube(offset + center) for offset in offsets]
+    colors = ['grey', 'blue', 'orange', 'green']
 
-    colors = ['grey', 'grey', 'grey', 'grey']
-    draw_cubes(ax, global_vertices_list, colors)
+    global_vertices_list = [create_unit_cube(offset) for offset in offsets]
 
-    ax.set_xlim([0, 5])
-    ax.set_ylim([0, 5])
-    ax.set_zlim([0, 5])
+    update_cubes(ax, global_vertices_list, colors)
 
     ax_box_x = plt.axes([0.2, 0.15, 0.1, 0.05])
     text_box_x = TextBox(ax_box_x, 'X', initial="0")
