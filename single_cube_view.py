@@ -47,10 +47,18 @@ def rotation_matrix_z(angle):
     c, s = np.cos(angle), np.sin(angle)
     return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
 
+def draw_ground(ax):
+    x = np.linspace(-1, 5, 2)
+    y = np.linspace(-1, 5, 2)
+    X, Y = np.meshgrid(x, y)
+    Z = np.zeros_like(X)
+    ax.plot_surface(X, Y, Z, color='gray', alpha=0.3)
+
 #more visibility, in order to not let the cube go outside the scope
 def update_cubes(ax, vertices_list, colors):
     ax.cla()
     draw_cubes(ax, vertices_list, colors)
+    draw_ground(ax)
     ax.set_xlim([-1, 5])
     ax.set_ylim([-1, 5])
     ax.set_zlim([-1, 5])
@@ -100,8 +108,27 @@ def update_position(ax, event=None):
     except ValueError:
         pass  
 
+def validate_positions(ax):
+    global global_vertices_list
+
+    invalid_cubes = []
+    for i, vertices in enumerate(global_vertices_list):
+        if np.any(vertices[:, 2] < 0):
+            invalid_cubes.append(i)
+
+    if invalid_cubes:
+        print(f"not ok")
+        temp_colors = colors.copy()
+        for idx in invalid_cubes:
+            temp_colors[idx] = 'red'
+        update_cubes(ax, global_vertices_list, temp_colors)
+    else:
+        print("ok")
+        update_cubes(ax, global_vertices_list, colors)
+
+
 def main():
-    global global_vertices_list, offsets, colors, text_box_x, text_box_y, text_box_z, current_rotation_matrix
+    global global_vertices_list, offsets, colors, text_box_x, text_box_y, text_box_z
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -127,18 +154,23 @@ def main():
     text_box_z.on_text_change(lambda val: update_position(ax))
 
     #buttons for rotation
-    ax_rot_x_90 = plt.axes([0.1, 0.01, 0.1, 0.075])
+    ax_rot_x_90 = plt.axes([0.07, 0.01, 0.1, 0.075])
     btn_rot_x_90 = Button(ax_rot_x_90, 'Rotate X 90')
 
-    ax_rot_y_90 = plt.axes([0.43, 0.01, 0.1, 0.075])
+    ax_rot_y_90 = plt.axes([0.33, 0.01, 0.1, 0.075])
     btn_rot_y_90 = Button(ax_rot_y_90, 'Rotate Y 90')
 
-    ax_rot_z_90 = plt.axes([0.76, 0.01, 0.1, 0.075])
+    ax_rot_z_90 = plt.axes([0.60, 0.01, 0.1, 0.075])
     btn_rot_z_90 = Button(ax_rot_z_90, 'Rotate Z 90')
+
+    ax_val_cube = plt.axes([0.85, 0.01, 0.1, 0.075])
+    btn_val_cube = Button(ax_val_cube, "Check rot/pos")
 
     btn_rot_x_90.on_clicked(lambda event: rotate(event, 'x', np.pi/2, ax, colors))
     btn_rot_y_90.on_clicked(lambda event: rotate(event, 'y', np.pi/2, ax, colors))
     btn_rot_z_90.on_clicked(lambda event: rotate(event, 'z', np.pi/2, ax, colors))
+    btn_val_cube.on_clicked(lambda event: validate_positions(ax))
+
 
     plt.show()
 
