@@ -139,6 +139,17 @@ def validate_positions(ax):
     else:
         print("ok")
 
+def add_second_cube(ax):
+    global second_cube_vertices_list, second_cube_positions, second_cube_colors
+    # definizione di un secondo cubo (2x2 cubetti)
+    second_cube_positions = np.array([(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 1)], dtype=int)
+    second_cube_colors = ['red', 'yellow', 'cyan', 'magenta']
+    # posizionamento secondario a lato del primo cubo
+    offset = np.array([3,0,0], dtype=float)
+    second_cube_vertices_list = get_vertices_from_positions(second_cube_positions, offset)
+    draw_cubes(ax, second_cube_vertices_list, second_cube_colors)
+    plt.draw()
+
 
 def main():
     global global_vertices_list, center, cube_positions, colors, text_box_x, text_box_y, text_box_z
@@ -193,6 +204,10 @@ def main():
     ax_val_cube = plt.axes([0.88, 0.01, 0.1, 0.075])
     btn_val_cube = Button(ax_val_cube, "Check rot/pos")
 
+    ax_btn_second_cube = plt.axes([0.88, 0.09, 0.1, 0.075])
+    btn_second_cube = Button(ax_btn_second_cube, "Second Cube")
+    
+    btn_second_cube.on_clicked(lambda event: add_second_cube(ax))
     btn_rot_x_90.on_clicked(lambda event: rotate(event, 'x', ax, colors))
     btn_rot_y_90.on_clicked(lambda event: rotate(event, 'y', ax, colors))
     btn_rot_z_90.on_clicked(lambda event: rotate(event, 'z', ax, colors))
