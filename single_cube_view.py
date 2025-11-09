@@ -43,9 +43,12 @@ def draw_ground(ax):
     ax.plot_surface(X, Y, Z, color='gray', alpha=0.3)
 
 #more visibility, in order to not let the cube go outside the scope
-def update_cubes(ax, vertices_list, colors):
+def update_cubes(ax):
     ax.cla()
-    draw_cubes(ax, vertices_list, colors)
+    for cube in cubes:
+        cube.draw(ax)
+    if current_cube:
+        current_cube.draw(ax)
     draw_ground(ax)
     ax.set_xlim([-1, 5])
     ax.set_ylim([-1, 5])
@@ -60,16 +63,15 @@ def get_vertices_from_positions(cube_positions, center):
         vertices_list.append(create_unit_cube(offset))
     return vertices_list
 
-def translate_center(center, direction):
-    return center + direction
+
 
 #vertices updated globally
-def translate(ax, direction):
+"""def translate(ax, direction):
     global center, cube_positions, colors, global_vertices_list
     center = translate_center(center, direction)
     global_vertices_list = get_vertices_from_positions(cube_positions, center)
     update_cubes(ax, global_vertices_list, colors)
-
+"""
 #k may be used better, rotates by 90 around x/y/z axis passing in the center
 def rotate_positions(cube_positions, axis, k=1):
 
@@ -90,7 +92,7 @@ def rotate_positions(cube_positions, axis, k=1):
     elif axis == 'z':
         R = R_z
     else:
-        return
+        return cube_positions
 
     scale = 2
     pos2 = cube_positions * scale              
@@ -106,8 +108,30 @@ def rotate_positions(cube_positions, axis, k=1):
 
     return (pos2_rot // scale).astype(int)
 
+
+cubes = []
+current_cube = None
+
+class Cube:
+    def __init__(self, cube_positions, center, colors):
+        self.positions = cube_positions
+        self.center = center
+        self.colors = colors
+        self.vertices_list = get_vertices_from_positions(cube_positions, center)
+        
+    def draw(self, ax):
+        draw_cubes(ax, self.vertices_list, self.colors)
+        
+    def translate_center(self, direction):
+        self.center += direction
+        self.vertices_list = get_vertices_from_positions(self.positions, self.center)
+        
+    def rotate(self, axis, k=1):
+        self.positions = rotate_positions(self.positions, axis, k)
+        self.vertices_list = get_vertices_from_positions(self.positions, self.center)
+
 #cube translate adding what's insiede the textboxes
-def update_position(ax, event=None):
+"""def update_position(ax, event=None):
     global center, global_vertices_list
     try:
         tx = float(text_box_x.text)
@@ -119,7 +143,7 @@ def update_position(ax, event=None):
         update_cubes(ax, global_vertices_list, colors)
     except ValueError:
         pass  
-
+"""
 def rotate(event, axis, ax, colors):
     global cube_positions, center, global_vertices_list
     cube_positions = rotate_positions(cube_positions, axis, k=1)
@@ -139,23 +163,36 @@ def validate_positions(ax):
     else:
         print("ok")
 
-def add_second_cube(ax):
-    global second_cube_vertices_list, second_cube_positions, second_cube_colors
-    # definizione di un secondo cubo (2x2 cubetti)
-    second_cube_positions = np.array([(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 1)], dtype=int)
-    second_cube_colors = ['red', 'yellow', 'cyan', 'magenta']
-    # posizionamento secondario a lato del primo cubo
-    offset = np.array([3,0,0], dtype=float)
-    second_cube_vertices_list = get_vertices_from_positions(second_cube_positions, offset)
-    draw_cubes(ax, second_cube_vertices_list, second_cube_colors)
-    plt.draw()
+def add_new_cube(ax):
+    global current_cube
+    if current_cube is not None:
+        print("not added, restart rot/trasl of same new cube")
+    else:
+        print('new cube')
+    offset = np.array([0.0, 0.0, 0.0], dtype=float)
+    if cubes:
+        # if there are already cubes, put the new beside it
+        offset = cubes[-1].center + np.array([2.0, 0.0, 0.0])
+    cube_positions = np.array([(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 1)], dtype=int)
+    cube_colors = ['red', 'yellow', 'cyan', 'magenta']
+    current_cube = Cube(cube_positions, offset, cube_colors)
+    update_cubes(ax)
 
+def fix_current_cube(ax):
+    global current_cube
+    if current_cube:
+        cubes.append(current_cube)
+        print("cube fixed:", current_cube.center)
+        current_cube = None
+        update_cubes(ax)
+    else:
+        print("noc ube to fix")
 
 def main():
-    global global_vertices_list, center, cube_positions, colors, text_box_x, text_box_y, text_box_z
+    global global_vertices_list, center, cube_positions, colors, current_cube#, text_box_x, text_box_y, text_box_z
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-
+    """
     #little cubelets
     cube_positions = np.array([(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 1)], dtype=int)
     center = np.array([0.0, 0.0, 0.0], dtype=float)
@@ -165,31 +202,31 @@ def main():
     global_vertices_list = get_vertices_from_positions(cube_positions, center)
 
     update_cubes(ax, global_vertices_list, colors)
-
+"""
     # translation buttons
     ax_btn_px = plt.axes([0.45, 0.01, 0.06, 0.075])
     btn_px = Button(ax_btn_px, '+X')
-    btn_px.on_clicked(lambda event: translate(ax, np.array([1, 0, 0])))
+    btn_px.on_clicked(lambda event: (current_cube.translate_center(np.array([1,0,0])), update_cubes(ax)) if current_cube else None)
 
     ax_btn_mx = plt.axes([0.52, 0.01, 0.06, 0.075])
     btn_mx = Button(ax_btn_mx, '-X')
-    btn_mx.on_clicked(lambda event: translate(ax, np.array([-1, 0, 0])))
+    btn_mx.on_clicked(lambda event: (current_cube.translate_center(np.array([-1,0,0])), update_cubes(ax)) if current_cube else None)
 
     ax_btn_py = plt.axes([0.59, 0.01, 0.06, 0.075])
     btn_py = Button(ax_btn_py, '+Y')
-    btn_py.on_clicked(lambda event: translate(ax, np.array([0, 1, 0])))
+    btn_py.on_clicked(lambda event: (current_cube.translate_center(np.array([0,1,0])), update_cubes(ax)) if current_cube else None)
 
     ax_btn_my = plt.axes([0.66, 0.01, 0.06, 0.075])
     btn_my = Button(ax_btn_my, '-Y')
-    btn_my.on_clicked(lambda event: translate(ax, np.array([0, -1, 0])))
+    btn_my.on_clicked(lambda event: (current_cube.translate_center(np.array([0,-1,0])), update_cubes(ax)) if current_cube else None)
 
     ax_btn_pz = plt.axes([0.73, 0.01, 0.06, 0.075])
     btn_pz = Button(ax_btn_pz, '+Z')
-    btn_pz.on_clicked(lambda event: translate(ax, np.array([0, 0, 1])))
+    btn_pz.on_clicked(lambda event: (current_cube.translate_center(np.array([0,0,1])), update_cubes(ax)) if current_cube else None)
 
     ax_btn_mz = plt.axes([0.80, 0.01, 0.06, 0.075])
     btn_mz = Button(ax_btn_mz, '-Z')
-    btn_mz.on_clicked(lambda event: translate(ax, np.array([0, 0, -1])))
+    btn_mz.on_clicked(lambda event: (current_cube.translate_center(np.array([0,0,-1])), update_cubes(ax)) if current_cube else None)
 
     #buttons for rotation
     ax_rot_x_90 = plt.axes([0.05, 0.01, 0.1, 0.075])
@@ -204,13 +241,17 @@ def main():
     ax_val_cube = plt.axes([0.88, 0.01, 0.1, 0.075])
     btn_val_cube = Button(ax_val_cube, "Check rot/pos")
 
-    ax_btn_second_cube = plt.axes([0.88, 0.09, 0.1, 0.075])
-    btn_second_cube = Button(ax_btn_second_cube, "Second Cube")
+    ax_btn_new_cube = plt.axes([0.88, 0.17, 0.1, 0.075])
+    btn_new_cube = Button(ax_btn_new_cube, "New Cube")
     
-    btn_second_cube.on_clicked(lambda event: add_second_cube(ax))
-    btn_rot_x_90.on_clicked(lambda event: rotate(event, 'x', ax, colors))
-    btn_rot_y_90.on_clicked(lambda event: rotate(event, 'y', ax, colors))
-    btn_rot_z_90.on_clicked(lambda event: rotate(event, 'z', ax, colors))
+    ax_btn_fix_cube = plt.axes([0.88, 0.25, 0.1, 0.075])
+    btn_fix_cube = Button(ax_btn_fix_cube, "Fix Cube")
+    
+    btn_fix_cube.on_clicked(lambda event: fix_current_cube(ax))
+    btn_new_cube.on_clicked(lambda event: add_new_cube(ax))
+    btn_rot_x_90.on_clicked(lambda event: (current_cube.rotate('x'), update_cubes(ax)) if current_cube else None)
+    btn_rot_y_90.on_clicked(lambda event: (current_cube.rotate('y'), update_cubes(ax)) if current_cube else None)
+    btn_rot_z_90.on_clicked(lambda event: (current_cube.rotate('z'), update_cubes(ax)) if current_cube else None)
     btn_val_cube.on_clicked(lambda event: validate_positions(ax))
 
 
