@@ -130,20 +130,6 @@ class Cube:
         self.positions = rotate_positions(self.positions, axis, k)
         self.vertices_list = get_vertices_from_positions(self.positions, self.center)
 
-#cube translate adding what's insiede the textboxes
-"""def update_position(ax, event=None):
-    global center, global_vertices_list
-    try:
-        tx = float(text_box_x.text)
-        ty = float(text_box_y.text)
-        tz = float(text_box_z.text)
-        direction = np.array([tx, ty, tz], dtype=float)
-        center = translate_center(center, direction)
-        global_vertices_list = get_vertices_from_positions(cube_positions, center) #passes vector with translation info
-        update_cubes(ax, global_vertices_list, colors)
-    except ValueError:
-        pass  
-"""
 def rotate(event, axis, ax, colors):
     global cube_positions, center, global_vertices_list
     cube_positions = rotate_positions(cube_positions, axis, k=1)
@@ -151,17 +137,27 @@ def rotate(event, axis, ax, colors):
     update_cubes(ax, global_vertices_list, colors)
 
 def validate_positions(ax):
-    current_vertices =get_vertices_from_positions(cube_positions, center)
+    global current_cube, cubes
+    
+    if current_cube is None:
+        print("no cube to validate")
+        return
+    
+    current_vertices =get_vertices_from_positions(current_cube.positions, current_cube.center)
     invalid_found = False
-    for i, vertices in enumerate(current_vertices):
+    
+    for vertices in current_vertices:
         if np.any(vertices[:, 2] < 0):
-            invalid_found = True
-            break
-
-    if invalid_found:
-        print("not ok")
-    else:
-        print("ok")
+            print('under ground, not ok')
+            return
+    
+    for fixed_cube in cubes:
+        for pos_fixed in fixed_cube.positions + fixed_cube.center:
+            for pos_current in current_cube.positions + current_cube.center:
+                if np.allclose(pos_fixed, pos_current):
+                    print('overlaps with other cubes, not ok')
+                    break
+    print('ok')
 
 def add_new_cube(ax):
     global current_cube
