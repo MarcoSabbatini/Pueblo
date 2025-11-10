@@ -63,15 +63,6 @@ def get_vertices_from_positions(cube_positions, center):
         vertices_list.append(create_unit_cube(offset))
     return vertices_list
 
-
-
-#vertices updated globally
-"""def translate(ax, direction):
-    global center, cube_positions, colors, global_vertices_list
-    center = translate_center(center, direction)
-    global_vertices_list = get_vertices_from_positions(cube_positions, center)
-    update_cubes(ax, global_vertices_list, colors)
-"""
 #k may be used better, rotates by 90 around x/y/z axis passing in the center
 def rotate_positions(cube_positions, axis, k=1):
 
@@ -136,33 +127,37 @@ def rotate(event, axis, ax, colors):
     global_vertices_list = get_vertices_from_positions(cube_positions, center) # save vertices globally after rot
     update_cubes(ax, global_vertices_list, colors)
 
-def validate_positions(ax):
+def validate_positions(ax, silent=False):
     global current_cube, cubes
     
     if current_cube is None:
-        print("no cube to validate")
-        return
+        if not silent:
+            print("no cube to validate")
+        return False
     
     current_vertices =get_vertices_from_positions(current_cube.positions, current_cube.center)
-    invalid_found = False
     
     for vertices in current_vertices:
         if np.any(vertices[:, 2] < 0):
-            print('under ground, not ok')
-            return
+            if not silent:
+                print('under ground, not ok')
+            return False
     
     for fixed_cube in cubes:
         for pos_fixed in fixed_cube.positions + fixed_cube.center:
             for pos_current in current_cube.positions + current_cube.center:
                 if np.allclose(pos_fixed, pos_current):
-                    print('overlaps with other cubes, not ok')
-                    break
-    print('ok')
+                    if not silent:
+                        print('overlaps with other cubes, not ok')
+                    return False
+    if not silent:
+        print('ok')
+    return True
 
 def add_new_cube(ax):
     global current_cube
     if current_cube is not None:
-        print("not added, restart rot/trasl of same new cube")
+        print("not permanently added, restart rot/trasl of same new cube")
     else:
         print('new cube')
     offset = np.array([0.0, 0.0, 0.0], dtype=float)
@@ -177,6 +172,9 @@ def add_new_cube(ax):
 def fix_current_cube(ax):
     global current_cube
     if current_cube:
+        if not validate_positions(ax, silent=True):
+            print("not fixed because not valid")
+            return
         cubes.append(current_cube)
         print("cube fixed:", current_cube.center)
         current_cube = None
@@ -185,20 +183,10 @@ def fix_current_cube(ax):
         print("noc ube to fix")
 
 def main():
-    global global_vertices_list, center, cube_positions, colors, current_cube#, text_box_x, text_box_y, text_box_z
+    global global_vertices_list, cube_positions, current_cube
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    """
-    #little cubelets
-    cube_positions = np.array([(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 1)], dtype=int)
-    center = np.array([0.0, 0.0, 0.0], dtype=float)
 
-    colors = ['grey', 'blue', 'orange', 'green']
-
-    global_vertices_list = get_vertices_from_positions(cube_positions, center)
-
-    update_cubes(ax, global_vertices_list, colors)
-"""
     # translation buttons
     ax_btn_px = plt.axes([0.45, 0.01, 0.06, 0.075])
     btn_px = Button(ax_btn_px, '+X')
