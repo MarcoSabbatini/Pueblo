@@ -135,7 +135,7 @@ def validate_positions(ax, silent=False):
             print("no cube to validate")
         return False
     
-    current_vertices =get_vertices_from_positions(current_cube.positions, current_cube.center)
+    current_vertices = get_vertices_from_positions(current_cube.positions, current_cube.center)
     
     for vertices in current_vertices:
         if np.any(vertices[:, 2] < 0):
@@ -150,6 +150,28 @@ def validate_positions(ax, silent=False):
                     if not silent:
                         print('overlaps with other cubes, not ok')
                     return False
+                
+    support_count = 0
+    for pos_current in current_cube.positions + current_cube.center:
+        below = pos_current.copy()
+        below[2] -= 1 # look right below the cubelet
+        # check if below is ground or another cubelet
+        if below[2] < 0:
+            support_count += 1
+        else:
+            for fixed_cube in cubes:
+                for pos_fixed in fixed_cube.positions + fixed_cube.center:
+                    if np.allclose(pos_fixed, below):
+                        support_count += 1
+                        break # found something
+        if support_count >= 2:
+            break # ok, can be fixed
+    
+    if support_count < 2:
+        if not silent:
+            print(f"not enough support ({support_count} cubelets touching), not ok")
+        return False
+    
     if not silent:
         print('ok')
     return True
