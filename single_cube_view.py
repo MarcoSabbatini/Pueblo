@@ -1,7 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from matplotlib.widgets import Button, TextBox
+from matplotlib.widgets import Button
+
+players = []
+current_player_index = 0
+
+
+GAME_CONFIG = {
+    2: {"colors": ["red", "blue"], "colored_cubes": 8, "neutral_cubes": 5},
+    3: {"colors": ["red", "blue", "green"], "colored_cubes": 6, "neutral_cubes": 5},
+    4: {"colors": ["red", "blue", "green", "purple"], "colored_cubes": 5, "neutral_cubes": 4},
+}
 
 #cubelets vertices
 def create_unit_cube(offset):
@@ -36,8 +46,8 @@ def draw_cubes(ax, vertices_list, colors):
         ax.add_collection3d(Poly3DCollection(faces, facecolors=color, linewidths=1, edgecolors='r', alpha=.75))
 
 def draw_ground(ax):
-    x = np.linspace(-1, 5, 2)
-    y = np.linspace(-1, 5, 2)
+    x = np.linspace(-1, 7, 2)
+    y = np.linspace(-1, 7, 2)
     X, Y = np.meshgrid(x, y)
     Z = np.zeros_like(X)
     ax.plot_surface(X, Y, Z, color='gray', alpha=0.3)
@@ -120,6 +130,30 @@ class Cube:
     def rotate(self, axis, k=1):
         self.positions = rotate_positions(self.positions, axis, k)
         self.vertices_list = get_vertices_from_positions(self.positions, self.center)
+        
+
+class Player:
+    def __init__(self, name, color, colored_cubes, neutral_cubes):
+        self.name = name
+        self.color = color
+        self.colored_cubes = colored_cubes
+        self.neutral_cubes = neutral_cubes
+        self.cubes = []  # player's fixed cubes
+
+    def enough_col_cube(self):
+        return self.colored_cubes > 0
+
+    def use_col_cube(self):
+        if self.colored_cubes > 0:
+            self.colored_cubes -= 1
+    
+    def enough_neu_cube(self):
+        return self.neutral_cubes > 0
+
+    def use_neu_cube(self):
+        if self.neutral_cubes > 0:
+            self.neutral_cubes -= 1
+
 
 def rotate(event, axis, ax, colors):
     global cube_positions, center, global_vertices_list
@@ -177,7 +211,9 @@ def validate_positions(ax, silent=False):
     return True
 
 def add_new_cube(ax):
-    global current_cube
+    global current_cube, current_player_index
+    player = players[current_player_index]
+    
     if current_cube is not None:
         print("not permanently added, restart rot/trasl of same new cube")
     else:
@@ -187,12 +223,15 @@ def add_new_cube(ax):
         # if there are already cubes, put the new beside it
         offset = cubes[-1].center + np.array([2.0, 0.0, 0.0])
     cube_positions = np.array([(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 1)], dtype=int)
-    cube_colors = ['red', 'yellow', 'cyan', 'magenta']
+    #cube_colors = ['red', 'yellow', 'cyan', 'magenta']
+    cube_colors = [player.color] * 4
     current_cube = Cube(cube_positions, offset, cube_colors)
     update_cubes(ax)
 
 def fix_current_cube(ax):
-    global current_cube
+    global current_cube, current_player_index
+    player = players[current_player_index]
+    
     if current_cube:
         if not validate_positions(ax, silent=True):
             print("not fixed because not valid")
@@ -200,9 +239,23 @@ def fix_current_cube(ax):
         cubes.append(current_cube)
         print("cube fixed:", current_cube.center)
         current_cube = None
+        current_player_index = (current_player_index + 1) % len(players) # next player
         update_cubes(ax)
     else:
         print("noc ube to fix")
+        
+def setup_players(num_players):
+    global players, current_player_index
+    current_player_index = 0
+    
+    config = GAME_CONFIG[num_players]
+    players = [Player(f"Player {i+1}", color, config["colored_cubes"], config["neutral_cubes"]) for i, color in enumerate(config["colors"])]
+    
+    print(f"Game started for {num_players}.")
+    
+    for p in players:
+        print(f"{p.name}: {p.color} ({p.colored_cubes} colored cubes) and {p.neutral_cubes} neutral cubes")
+
 
 def main():
     global global_vertices_list, cube_positions, current_cube
@@ -260,6 +313,7 @@ def main():
     btn_rot_z_90.on_clicked(lambda event: (current_cube.rotate('z'), update_cubes(ax)) if current_cube else None)
     btn_val_cube.on_clicked(lambda event: validate_positions(ax))
 
+    setup_players(2)
 
     plt.show()
 
