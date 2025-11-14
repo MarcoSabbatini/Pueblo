@@ -198,10 +198,10 @@ def validate_positions(ax, silent=False):
                     if np.allclose(pos_fixed, below):
                         support_count += 1
                         break # found something
-        if support_count >= 2:
+        if support_count >= 3:
             break # ok, can be fixed
     
-    if support_count < 2:
+    if support_count < 3:
         if not silent:
             print(f"not enough support ({support_count} cubelets touching), not ok")
         return False
